@@ -1,7 +1,11 @@
 import os
 from io import BytesIO
 from tempfile import mkstemp
-from unittest import TestCase
+
+try:
+    from unittest2 import TestCase
+except ImportError:
+    from unittest import TestCase
 
 from scheme import formats
 

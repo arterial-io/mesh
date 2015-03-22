@@ -384,7 +384,7 @@ class HttpServer(WsgiServer):
                     return response(BAD_REQUEST)
             else:
                 try:
-                    request.data = self.formats[mimetype].unserialize(data)
+                    request.data = self.formats[mimetype].unserialize(data, endpoint.schema)
                 except Exception:
                     log('exception', 'failed to parse data for %r', request)
                     return response(BAD_REQUEST)
@@ -396,11 +396,13 @@ class HttpServer(WsgiServer):
             return response(SERVER_ERROR)
 
         format = request.format
-        if isinstance(format, tuple):
-            format, params = format
-            response.data = format.serialize(response.data, **params)
-        else:
-            response.data = format.serialize(response.data)
+        if response.data:
+            schema = endpoint.responses[response.status].schema
+            if isinstance(format, tuple):
+                format, params = format
+                response.data = format.serialize(response.data, schema, **params)
+            else:
+                response.data = format.serialize(response.data, schema)
 
         response.mimetype = format.mimetype
         return response
@@ -444,7 +446,7 @@ class HttpClient(Client):
 
         if response.data:
             response.data = schema.process(self.formats[response.mimetype]
-                .unserialize(response.data.decode('utf8')), INBOUND, True)
+                .unserialize(response.data.decode('utf8'), schema), INBOUND, True)
 
         if response.ok:
             return response
@@ -506,7 +508,7 @@ class HttpClient(Client):
                     data = UrlEncoded.serialize(data)
                     mimetype = fields.UrlEncoded.mimetype
                 else:
-                    data = format.serialize(data)
+                    data = format.serialize(data, endpoint['schema'])
                     mimetype = format.mimetype
 
         if mimetype:
